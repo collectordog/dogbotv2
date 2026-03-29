@@ -1,5 +1,6 @@
 {
     "gmt_offset": 0,
     "rng_enabled": true,
-    "webhook_url": ""
+    "webhook_url": "",
+    "hug_enabled": true
 }
