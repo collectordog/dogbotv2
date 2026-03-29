@@ -22,6 +22,7 @@ QUESTIONS_FILE         = "questions.json"
 FEATURES_FILE          = "features.json"
 PUSH_MESSAGES_FILE     = "push_messages.json"
 PENDING_REMINDERS_FILE = "pending_reminders.json"
+GIVEAWAYS_FILE         = "giveaways.json"
 
 
 def load_custom_commands():
@@ -68,6 +69,76 @@ def load_pending_reminders():
 def save_pending_reminders(data):
     with open(PENDING_REMINDERS_FILE, "w") as f:
         json.dump(data, f, indent=4)
+
+
+def load_giveaways():
+    if not os.path.exists(GIVEAWAYS_FILE):
+        return []
+    with open(GIVEAWAYS_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_giveaways(data):
+    with open(GIVEAWAYS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def _update_giveaway_entry(entry):
+    giveaways = load_giveaways()
+    for i, g in enumerate(giveaways):
+        if g["channel_id"] == entry["channel_id"] and g["end_at"] == entry["end_at"]:
+            giveaways[i] = entry
+            break
+    save_giveaways(giveaways)
+
+
+def _remove_giveaway_entry(entry):
+    save_giveaways([g for g in load_giveaways()
+                    if not (g["channel_id"] == entry["channel_id"]
+                            and g["end_at"] == entry["end_at"])])
+
+
+async def _run_giveaway(entry):
+    channel = bot.get_channel(entry["channel_id"])
+    if not channel:
+        print(f"[Giveaway] Channel {entry['channel_id']} not found.")
+        _remove_giveaway_entry(entry)
+        return
+
+    if not entry.get("message_id"):
+        features = load_features()
+        offset   = features.get("gmt_offset", 0)
+        end_dt   = datetime.fromtimestamp(entry["end_at"], tz=timezone.utc) + timedelta(hours=offset)
+        sign     = f"+{offset}" if offset >= 0 else str(offset)
+        msg = await channel.send(
+            f"🎉 **GIVEAWAY** 🎉\n"
+            f"**Prize:** {entry['prize']}\n"
+            f"**Ends:** {end_dt.strftime('%d %b %Y at %H:%M')} (UTC{sign})\n"
+            f"React with 🎉 to enter!"
+        )
+        await msg.add_reaction("🎉")
+        entry["message_id"] = msg.id
+        _update_giveaway_entry(entry)
+
+    delay = entry["end_at"] - datetime.now(timezone.utc).timestamp()
+    if delay > 0:
+        await asyncio.sleep(delay)
+
+    try:
+        msg = await channel.fetch_message(entry["message_id"])
+    except (discord.NotFound, discord.HTTPException):
+        _remove_giveaway_entry(entry)
+        return
+
+    reaction = discord.utils.get(msg.reactions, emoji="🎉")
+    entrants = [u async for u in reaction.users() if not u.bot] if reaction else []
+    if not entrants:
+        await channel.send(f"🎉 The giveaway for **{entry['prize']}** ended with no entries!")
+    else:
+        winner = random.choice(entrants)
+        await channel.send(f"🎉 Congratulations {winner.mention}! You won **{entry['prize']}**!")
+
+    _remove_giveaway_entry(entry)
 
 
 def load_reminders():
@@ -207,6 +278,10 @@ async def on_ready():
             surviving.append(entry)
     if surviving:
         print(f"[Reminders] Restored {len(surviving)} pending !remindme timer(s).")
+
+    # Start any queued giveaways
+    for entry in load_giveaways():
+        asyncio.create_task(_run_giveaway(entry))
 
     # Send and clear any queued push messages
     pending = load_push_messages()

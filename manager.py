@@ -10,6 +10,7 @@ REMINDERS_FILE     = os.path.join(os.path.dirname(__file__), "reminders.json")
 QUESTIONS_FILE     = os.path.join(os.path.dirname(__file__), "questions.json")
 FEATURES_FILE      = os.path.join(os.path.dirname(__file__), "features.json")
 PUSH_MESSAGES_FILE = os.path.join(os.path.dirname(__file__), "push_messages.json")
+GIVEAWAYS_FILE     = os.path.join(os.path.dirname(__file__), "giveaways.json")
 
 DAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
@@ -64,6 +65,13 @@ def load_push_messages():
 
 def save_push_messages(d):
     with open(PUSH_MESSAGES_FILE, "w") as f: json.dump(d, f, indent=4)
+
+def load_giveaways():
+    if not os.path.exists(GIVEAWAYS_FILE): return []
+    with open(GIVEAWAYS_FILE) as f: return json.load(f)
+
+def save_giveaways(d):
+    with open(GIVEAWAYS_FILE, "w") as f: json.dump(d, f, indent=4)
 
 
 # ── Widget helpers ─────────────────────────────────────────────────────────────
@@ -142,6 +150,7 @@ class ManagerApp(tk.Tk):
             ("Questions",    self._build_questions_tab),
             ("Push Message", self._build_push_tab),
             ("Fun Features", self._build_features_tab),
+            ("Giveaway",     self._build_giveaway_tab),
             ("Utility",      self._build_utility_tab),
         ]:
             f = tk.Frame(nb, bg=BG)
@@ -509,6 +518,142 @@ class ManagerApp(tk.Tk):
         d["spank_enabled"] = self._spank_var.get()
         save_features(d)
         self.set_status("Saved. Deploy to apply.")
+
+    # ── Giveaway ──────────────────────────────────────────────────────────────
+
+    def _build_giveaway_tab(self, p):
+        section(p, "Giveaway", "Schedule a giveaway — the bot posts the message and picks a winner.")
+
+        # Live clock (shares the GMT offset from Reminders tab)
+        self._gw_clock_lbl = tk.Label(p, text="", bg=BG, fg=GOLD,
+                                      font=("Segoe UI", 11, "bold"))
+        self._gw_clock_lbl.pack(pady=(0, 10))
+        self._giveaway_tick()
+
+        # Channel ID
+        lbl(p, "Channel ID", dim=True).pack(fill="x", padx=20)
+        self._gw_ch = tk.StringVar()
+        inp(p, self._gw_ch).pack(padx=20, pady=(2, 4), fill="x")
+
+        pf = tk.Frame(p, bg=BG)
+        pf.pack(padx=20, pady=(0, 10), fill="x")
+        for name, ch_id in [("General Chat",  "472851820448972800"),
+                             ("Announcements", "478724610330722305")]:
+            tk.Button(pf, text=name, bg=BG_CARD, fg=FG_DIM,
+                      font=("Segoe UI", 9), relief="flat", cursor="hand2",
+                      command=lambda c=ch_id: self._gw_ch.set(c)
+                      ).pack(side="left", padx=(0, 6))
+
+        # Prize
+        lbl(p, "Prize", dim=True).pack(fill="x", padx=20)
+        self._gw_prize = tk.StringVar()
+        inp(p, self._gw_prize).pack(padx=20, pady=(2, 10), fill="x")
+
+        # End date & time
+        lbl(p, "End date & time (your local time)", dim=True).pack(fill="x", padx=20)
+        dt_frame = tk.Frame(p, bg=BG)
+        dt_frame.pack(padx=20, pady=(2, 10), fill="x")
+
+        now_local = datetime.now(timezone.utc) + timedelta(hours=self._get_gw_offset())
+        years = [str(now_local.year), str(now_local.year + 1)]
+
+        self._gw_day   = tk.StringVar(value=f"{now_local.day:02d}")
+        self._gw_month = tk.StringVar(value=f"{now_local.month:02d}")
+        self._gw_year  = tk.StringVar(value=str(now_local.year))
+        self._gw_time  = tk.StringVar(value="12:00")
+
+        for label_text, var, values, w in [
+            ("Day",   self._gw_day,   [f"{i:02d}" for i in range(1, 32)], 4),
+            ("Month", self._gw_month, [f"{i:02d}" for i in range(1, 13)], 4),
+            ("Year",  self._gw_year,  years,                               6),
+        ]:
+            col = tk.Frame(dt_frame, bg=BG)
+            col.pack(side="left", padx=(0, 8))
+            tk.Label(col, text=label_text, bg=BG, fg=FG_DIM,
+                     font=("Segoe UI", 9), anchor="center").pack(fill="x")
+            ttk.Combobox(col, textvariable=var, values=values,
+                         width=w, state="readonly", font=("Segoe UI", 10)).pack()
+
+        tk.Label(dt_frame, text="", bg=BG, width=2).pack(side="left")
+
+        time_col = tk.Frame(dt_frame, bg=BG)
+        time_col.pack(side="left")
+        tk.Label(time_col, text="Time (HH:MM)", bg=BG, fg=FG_DIM,
+                 font=("Segoe UI", 9), anchor="center").pack(fill="x")
+        inp(time_col, self._gw_time, width=7).pack()
+
+        # Queue status label
+        self._gw_queue_lbl = tk.Label(p, text="", bg=BG, fg=FG_DIM, font=("Segoe UI", 9))
+        self._gw_queue_lbl.pack(fill="x", padx=20)
+        self._refresh_gw_label()
+
+        bf = tk.Frame(p, bg=BG)
+        bf.pack(padx=20, pady=8, fill="x")
+        btn(bf, "Queue & Deploy", ACCENT, self._queue_giveaway).pack(
+            side="left", expand=True, fill="x", padx=(0, 4))
+        btn(bf, "Clear Queue", RED, self._clear_giveaway_queue).pack(
+            side="left", expand=True, fill="x", padx=(4, 0))
+
+    def _get_gw_offset(self):
+        try:
+            return int(self._offset_var.get())
+        except Exception:
+            return load_features().get("gmt_offset", 0)
+
+    def _giveaway_tick(self):
+        offset = self._get_gw_offset()
+        now    = datetime.now(timezone.utc) + timedelta(hours=offset)
+        sign   = f"+{offset}" if offset >= 0 else str(offset)
+        self._gw_clock_lbl.config(text=f"🕐  {now.strftime('%H:%M:%S')}  UTC{sign}")
+        self.after(1000, self._giveaway_tick)
+
+    def _refresh_gw_label(self):
+        gs = load_giveaways()
+        if gs:
+            self._gw_queue_lbl.config(text=f"{len(gs)} giveaway(s) queued / active.")
+        else:
+            self._gw_queue_lbl.config(text="No giveaways queued.")
+
+    def _queue_giveaway(self):
+        ch       = self._gw_ch.get().strip()
+        prize    = self._gw_prize.get().strip()
+        time_str = self._gw_time.get().strip()
+        if not ch:
+            messagebox.showwarning("Missing channel", "Enter a channel ID."); return
+        if not prize:
+            messagebox.showwarning("Missing prize", "Enter a prize."); return
+        try:
+            ch_id = int(ch)
+        except ValueError:
+            messagebox.showwarning("Invalid channel", "Channel ID must be a number."); return
+        try:
+            h, m = map(int, time_str.split(":"))
+            assert 0 <= h <= 23 and 0 <= m <= 59
+        except Exception:
+            messagebox.showwarning("Invalid time", "Use HH:MM format."); return
+        try:
+            offset    = self._get_gw_offset()
+            end_local = datetime(
+                int(self._gw_year.get()), int(self._gw_month.get()), int(self._gw_day.get()),
+                h, m, tzinfo=timezone(timedelta(hours=offset))
+            )
+            end_at = end_local.timestamp()
+        except ValueError as e:
+            messagebox.showwarning("Invalid date", str(e)); return
+        if end_at <= datetime.now(timezone.utc).timestamp():
+            messagebox.showwarning("Invalid time", "End time must be in the future."); return
+        gs = load_giveaways()
+        gs.append({"channel_id": ch_id, "prize": prize, "end_at": end_at, "message_id": None})
+        save_giveaways(gs)
+        self._refresh_gw_label()
+        self.set_status("Giveaway queued. Deploying...")
+        self.deploy()
+
+    def _clear_giveaway_queue(self):
+        if not messagebox.askyesno("Confirm", "Clear all queued giveaways?"): return
+        save_giveaways([])
+        self._refresh_gw_label()
+        self.set_status("Giveaway queue cleared.")
 
     # ── Utility ───────────────────────────────────────────────────────────────
 
