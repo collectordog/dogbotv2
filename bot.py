@@ -106,14 +106,11 @@ async def _run_giveaway(entry):
         return
 
     if not entry.get("message_id"):
-        features = load_features()
-        offset   = features.get("gmt_offset", 0)
-        end_dt   = datetime.fromtimestamp(entry["end_at"], tz=timezone.utc) + timedelta(hours=offset)
-        sign     = f"+{offset}" if offset >= 0 else str(offset)
+        end_ts = int(entry["end_at"])
         msg = await channel.send(
             f"🎉 **GIVEAWAY** 🎉\n"
             f"**Prize:** {entry['prize']}\n"
-            f"**Ends:** {end_dt.strftime('%d %b %Y at %H:%M')} (UTC{sign})\n"
+            f"**Ends:** <t:{end_ts}:F> (<t:{end_ts}:R>)\n"
             f"React with 🎉 to enter!"
         )
         await msg.add_reaction("🎉")
