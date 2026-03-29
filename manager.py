@@ -400,10 +400,8 @@ class ManagerApp(tk.Tk):
         data = load_questions()
         if data.get("command"):
             self.q_cmd_var.set(data["command"])
-        idx = data.get("current_index", 0)
-        for i, q in enumerate(data.get("questions", [])):
-            marker = "▶ " if i == idx else "  "
-            self.q_listbox.insert("end", f"{marker}{q['question']}  ||{q['answer']}||")
+        for q in data.get("questions", []):
+            self.q_listbox.insert("end", f"{q['question']}  ||{q['answer']}||")
         self._questions_cache = data.get("questions", [])
 
     def on_q_select(self, _=None):

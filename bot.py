@@ -2,6 +2,7 @@ import discord
 import json
 import os
 import re
+import random
 from discord.ext import commands, tasks
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -46,14 +47,10 @@ def resolve_mentions(text, guild):
 
 def load_questions():
     if not os.path.exists(QUESTIONS_FILE):
-        return {"channel_id": None, "current_index": 0, "questions": []}
+        return {"command": "", "questions": []}
     with open(QUESTIONS_FILE, "r") as f:
         return json.load(f)
 
-
-def save_questions(data):
-    with open(QUESTIONS_FILE, "w") as f:
-        json.dump(data, f, indent=4)
 
 
 def load_reminders():
@@ -98,12 +95,9 @@ async def on_message(message):
             if not questions:
                 await message.channel.send("No questions available yet.")
                 return
-            idx = q_data.get("current_index", 0) % len(questions)
-            entry = questions[idx]
+            entry = random.choice(questions)
             msg = f"Question: {entry['question']} -> Answer ||{entry['answer']}||"
             await message.channel.send(msg)
-            q_data["current_index"] = (idx + 1) % len(questions)
-            save_questions(q_data)
             return
 
         # Custom commands
