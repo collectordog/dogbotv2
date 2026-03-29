@@ -315,7 +315,7 @@ class ManagerApp(tk.Tk):
     # ------------------------------------------------------------------ Deploy
 
     def deploy(self):
-        repo_dir = os.path.dirname(__file__)
+        repo_dir = os.path.dirname(os.path.abspath(__file__))
         try:
             subprocess.run(["git", "add", "."], cwd=repo_dir, check=True)
             result = subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo_dir)
