@@ -605,15 +605,6 @@ class ManagerApp(tk.Tk):
         self._gw_clock_lbl.pack(pady=(0, 6))
         self._giveaway_tick()
 
-        # Active / queued giveaways list
-        lf, self._gw_lb = scrolled_lb(p, 58, 4)
-        lf.pack(padx=20, fill="x")
-
-        btn(p, "Delete Selected", RED, self._del_giveaway).pack(
-            padx=20, pady=(4, 10), fill="x")
-
-        # ── New giveaway form ──
-        tk.Frame(p, bg=GREY, height=1).pack(fill="x", padx=20, pady=(0, 8))
 
         # Channel ID
         lbl(p, "Channel ID", dim=True).pack(fill="x", padx=20)
@@ -670,8 +661,6 @@ class ManagerApp(tk.Tk):
         btn(p, "Queue & Deploy", ACCENT, self._queue_giveaway).pack(
             padx=20, pady=(0, 6), fill="x")
 
-        self._refresh_gw_list()
-
     def _get_gw_offset(self):
         try:
             return int(self._offset_var.get())
@@ -685,19 +674,6 @@ class ManagerApp(tk.Tk):
         self._gw_clock_lbl.config(text=f"🕐  {now.strftime('%H:%M:%S')}  UTC{sign}")
         self.after(1000, self._giveaway_tick)
 
-    def _refresh_gw_list(self):
-        self._gw_lb.delete(0, "end")
-        self.__gws = load_giveaways()
-        offset = self._get_gw_offset()
-        sign   = f"+{offset}" if offset >= 0 else str(offset)
-        for g in self.__gws:
-            ch_name = self._GW_PRESETS.get(g["channel_id"], str(g["channel_id"]))
-            end_dt  = datetime.fromtimestamp(g["end_at"], tz=timezone.utc) + timedelta(hours=offset)
-            status  = "active" if g.get("message_id") else "queued"
-            self._gw_lb.insert("end",
-                f"[{status}]  {ch_name:<16}  {g['prize']:<28}  "
-                f"{end_dt.strftime('%d %b %Y %H:%M')} UTC{sign}"
-            )
 
     def _queue_giveaway(self):
         ch       = self._gw_ch.get().strip()
@@ -732,23 +708,6 @@ class ManagerApp(tk.Tk):
         save_giveaways(gs)
         self.set_status("Giveaway queued. Deploying...")
         self.deploy()
-        # Clear locally so the next deploy (e.g. a push message) doesn't re-trigger this giveaway
-        save_giveaways([])
-        self._refresh_gw_list()
-
-    def _del_giveaway(self):
-        sel = self._gw_lb.curselection()
-        if not sel:
-            messagebox.showwarning("No selection", "Select a giveaway first."); return
-        g = self.__gws[sel[0]]
-        label = g["prize"]
-        if not messagebox.askyesno("Confirm", f'Delete giveaway "{label}"?'): return
-        gs = load_giveaways()
-        gs = [x for x in gs if not (x["channel_id"] == g["channel_id"]
-                                     and x["end_at"] == g["end_at"])]
-        save_giveaways(gs)
-        self._refresh_gw_list()
-        self.set_status(f'Deleted "{label}".')
 
     # ── Utility ───────────────────────────────────────────────────────────────
 

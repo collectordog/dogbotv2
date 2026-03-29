@@ -122,15 +122,26 @@ async def _run_giveaway(entry):
             _remove_giveaway_entry(entry)
             return
         end_ts = int(entry["end_at"])
-        msg = await channel.send(
-            f"🎉 **GIVEAWAY** 🎉\n"
-            f"**Prize:** {entry['prize']}\n"
-            f"**Ends:** <t:{end_ts}:F> (<t:{end_ts}:R>)\n"
-            f"React with 🎉 to enter!"
-        )
-        await msg.add_reaction("🎉")
-        entry["message_id"] = msg.id
-        _update_giveaway_entry(entry)
+        # Search channel history for an existing message in case of a redeploy mid-giveaway
+        existing = None
+        async for m in channel.history(limit=50):
+            if m.author == bot.user and f"<t:{end_ts}:" in m.content and entry["prize"] in m.content:
+                existing = m
+                break
+        if existing:
+            print(f"[Giveaway] Reattached to existing message for: {entry['prize']}")
+            entry["message_id"] = existing.id
+            _update_giveaway_entry(entry)
+        else:
+            msg = await channel.send(
+                f"🎉 **GIVEAWAY** 🎉\n"
+                f"**Prize:** {entry['prize']}\n"
+                f"**Ends:** <t:{end_ts}:F> (<t:{end_ts}:R>)\n"
+                f"React with 🎉 to enter!"
+            )
+            await msg.add_reaction("🎉")
+            entry["message_id"] = msg.id
+            _update_giveaway_entry(entry)
 
     delay = entry["end_at"] - datetime.now(timezone.utc).timestamp()
     if delay > 0:
