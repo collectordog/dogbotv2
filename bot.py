@@ -1,6 +1,7 @@
 import discord
 import json
 import os
+import re
 from discord.ext import commands, tasks
 from datetime import datetime, timezone
 from dotenv import load_dotenv
@@ -23,6 +24,21 @@ def load_custom_commands():
         return json.load(f)
 
 
+def resolve_mentions(text, guild):
+    """Replace @RoleName and @everyone/@here with proper Discord mention syntax."""
+    if guild is None:
+        return text
+
+    def replace_role(match):
+        name = match.group(1).lower()
+        for role in guild.roles:
+            if role.name.lower() == name:
+                return role.mention
+        return match.group(0)  # leave unchanged if not found
+
+    return re.sub(r'@([^\s<>@#&!]+)', replace_role, text)
+
+
 def load_reminders():
     if not os.path.exists(REMINDERS_FILE):
         return []
@@ -38,7 +54,8 @@ async def check_reminders():
         if now.weekday() == reminder["day"] and now.hour == h and now.minute == m:
             channel = bot.get_channel(reminder["channel_id"])
             if channel:
-                await channel.send(reminder["message"])
+                text = resolve_mentions(reminder["message"], channel.guild)
+                await channel.send(text, allowed_mentions=discord.AllowedMentions(roles=True, everyone=True))
 
 
 @bot.event
@@ -56,7 +73,8 @@ async def on_message(message):
         trigger = message.content[1:].lower().strip()
         custom_cmds = load_custom_commands()
         if trigger in custom_cmds:
-            await message.channel.send(custom_cmds[trigger])
+            text = resolve_mentions(custom_cmds[trigger], message.guild)
+            await message.channel.send(text, allowed_mentions=discord.AllowedMentions(roles=True, everyone=True))
             return
 
     await bot.process_commands(message)
