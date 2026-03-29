@@ -521,14 +521,29 @@ class ManagerApp(tk.Tk):
 
     # ── Giveaway ──────────────────────────────────────────────────────────────
 
+    _GW_PRESETS = {
+        472851820448972800: "General Chat",
+        478724610330722305: "Announcements",
+    }
+
     def _build_giveaway_tab(self, p):
         section(p, "Giveaway", "Schedule a giveaway — the bot posts the message and picks a winner.")
 
         # Live clock (shares the GMT offset from Reminders tab)
         self._gw_clock_lbl = tk.Label(p, text="", bg=BG, fg=GOLD,
                                       font=("Segoe UI", 11, "bold"))
-        self._gw_clock_lbl.pack(pady=(0, 10))
+        self._gw_clock_lbl.pack(pady=(0, 6))
         self._giveaway_tick()
+
+        # Active / queued giveaways list
+        lf, self._gw_lb = scrolled_lb(p, 58, 4)
+        lf.pack(padx=20, fill="x")
+
+        btn(p, "Delete Selected", RED, self._del_giveaway).pack(
+            padx=20, pady=(4, 10), fill="x")
+
+        # ── New giveaway form ──
+        tk.Frame(p, bg=GREY, height=1).pack(fill="x", padx=20, pady=(0, 8))
 
         # Channel ID
         lbl(p, "Channel ID", dim=True).pack(fill="x", padx=20)
@@ -536,7 +551,7 @@ class ManagerApp(tk.Tk):
         inp(p, self._gw_ch).pack(padx=20, pady=(2, 4), fill="x")
 
         pf = tk.Frame(p, bg=BG)
-        pf.pack(padx=20, pady=(0, 10), fill="x")
+        pf.pack(padx=20, pady=(0, 8), fill="x")
         for name, ch_id in [("General Chat",  "472851820448972800"),
                              ("Announcements", "478724610330722305")]:
             tk.Button(pf, text=name, bg=BG_CARD, fg=FG_DIM,
@@ -547,7 +562,7 @@ class ManagerApp(tk.Tk):
         # Prize
         lbl(p, "Prize", dim=True).pack(fill="x", padx=20)
         self._gw_prize = tk.StringVar()
-        inp(p, self._gw_prize).pack(padx=20, pady=(2, 10), fill="x")
+        inp(p, self._gw_prize).pack(padx=20, pady=(2, 8), fill="x")
 
         # End date & time
         lbl(p, "End date & time (your local time)", dim=True).pack(fill="x", padx=20)
@@ -582,17 +597,10 @@ class ManagerApp(tk.Tk):
                  font=("Segoe UI", 9), anchor="center").pack(fill="x")
         inp(time_col, self._gw_time, width=7).pack()
 
-        # Queue status label
-        self._gw_queue_lbl = tk.Label(p, text="", bg=BG, fg=FG_DIM, font=("Segoe UI", 9))
-        self._gw_queue_lbl.pack(fill="x", padx=20)
-        self._refresh_gw_label()
+        btn(p, "Queue & Deploy", ACCENT, self._queue_giveaway).pack(
+            padx=20, pady=(0, 6), fill="x")
 
-        bf = tk.Frame(p, bg=BG)
-        bf.pack(padx=20, pady=8, fill="x")
-        btn(bf, "Queue & Deploy", ACCENT, self._queue_giveaway).pack(
-            side="left", expand=True, fill="x", padx=(0, 4))
-        btn(bf, "Clear Queue", RED, self._clear_giveaway_queue).pack(
-            side="left", expand=True, fill="x", padx=(4, 0))
+        self._refresh_gw_list()
 
     def _get_gw_offset(self):
         try:
@@ -607,12 +615,19 @@ class ManagerApp(tk.Tk):
         self._gw_clock_lbl.config(text=f"🕐  {now.strftime('%H:%M:%S')}  UTC{sign}")
         self.after(1000, self._giveaway_tick)
 
-    def _refresh_gw_label(self):
-        gs = load_giveaways()
-        if gs:
-            self._gw_queue_lbl.config(text=f"{len(gs)} giveaway(s) queued / active.")
-        else:
-            self._gw_queue_lbl.config(text="No giveaways queued.")
+    def _refresh_gw_list(self):
+        self._gw_lb.delete(0, "end")
+        self.__gws = load_giveaways()
+        offset = self._get_gw_offset()
+        sign   = f"+{offset}" if offset >= 0 else str(offset)
+        for g in self.__gws:
+            ch_name = self._GW_PRESETS.get(g["channel_id"], str(g["channel_id"]))
+            end_dt  = datetime.fromtimestamp(g["end_at"], tz=timezone.utc) + timedelta(hours=offset)
+            status  = "active" if g.get("message_id") else "queued"
+            self._gw_lb.insert("end",
+                f"[{status}]  {ch_name:<16}  {g['prize']:<28}  "
+                f"{end_dt.strftime('%d %b %Y %H:%M')} UTC{sign}"
+            )
 
     def _queue_giveaway(self):
         ch       = self._gw_ch.get().strip()
@@ -645,15 +660,23 @@ class ManagerApp(tk.Tk):
         gs = load_giveaways()
         gs.append({"channel_id": ch_id, "prize": prize, "end_at": end_at, "message_id": None})
         save_giveaways(gs)
-        self._refresh_gw_label()
+        self._refresh_gw_list()
         self.set_status("Giveaway queued. Deploying...")
         self.deploy()
 
-    def _clear_giveaway_queue(self):
-        if not messagebox.askyesno("Confirm", "Clear all queued giveaways?"): return
-        save_giveaways([])
-        self._refresh_gw_label()
-        self.set_status("Giveaway queue cleared.")
+    def _del_giveaway(self):
+        sel = self._gw_lb.curselection()
+        if not sel:
+            messagebox.showwarning("No selection", "Select a giveaway first."); return
+        g = self.__gws[sel[0]]
+        label = g["prize"]
+        if not messagebox.askyesno("Confirm", f'Delete giveaway "{label}"?'): return
+        gs = load_giveaways()
+        gs = [x for x in gs if not (x["channel_id"] == g["channel_id"]
+                                     and x["end_at"] == g["end_at"])]
+        save_giveaways(gs)
+        self._refresh_gw_list()
+        self.set_status(f'Deleted "{label}".')
 
     # ── Utility ───────────────────────────────────────────────────────────────
 
