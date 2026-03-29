@@ -113,7 +113,14 @@ async def _run_giveaway(entry):
         _remove_giveaway_entry(entry)
         return
 
+    now_ts = datetime.now(timezone.utc).timestamp()
+
     if not entry.get("message_id"):
+        # If the giveaway already expired before the bot could post it, silently drop it
+        if entry["end_at"] <= now_ts:
+            print(f"[Giveaway] Skipping already-expired giveaway: {entry['prize']}")
+            _remove_giveaway_entry(entry)
+            return
         end_ts = int(entry["end_at"])
         msg = await channel.send(
             f"🎉 **GIVEAWAY** 🎉\n"
@@ -435,6 +442,31 @@ async def spank_cmd(ctx, target: discord.Member = None):
         await ctx.send("Mention someone to spank! e.g. `!spank @user`")
         return
     await ctx.send(f"🥵🥵 {ctx.author.mention} spanks {target.mention}! 🥵🥵")
+
+
+@bot.command(name="rerollgiveaway")
+async def rerollgiveaway_cmd(ctx, message_id: int = None):
+    if not has_mod_role(ctx.author):
+        await ctx.send("You need the moderator role to use this command.")
+        return
+    if not message_id:
+        await ctx.send("Usage: `!rerollgiveaway <message_id>`")
+        return
+    try:
+        msg = await ctx.channel.fetch_message(message_id)
+    except discord.NotFound:
+        await ctx.send("❌ Message not found in this channel.")
+        return
+    except discord.HTTPException:
+        await ctx.send("❌ Failed to fetch the message.")
+        return
+    reaction = discord.utils.get(msg.reactions, emoji="🎉")
+    entrants = [u async for u in reaction.users() if not u.bot] if reaction else []
+    if not entrants:
+        await ctx.send("🎉 No valid entries found on that message.")
+        return
+    winner = random.choice(entrants)
+    await ctx.send(f"🎉 Reroll! The new winner is {winner.mention}! Congratulations!")
 
 
 @bot.command(name="clear")
