@@ -16,11 +16,12 @@ intents.members = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
-COMMANDS_FILE      = "commands.json"
-REMINDERS_FILE     = "reminders.json"
-QUESTIONS_FILE     = "questions.json"
-FEATURES_FILE      = "features.json"
-PUSH_MESSAGES_FILE = "push_messages.json"
+COMMANDS_FILE          = "commands.json"
+REMINDERS_FILE         = "reminders.json"
+QUESTIONS_FILE         = "questions.json"
+FEATURES_FILE          = "features.json"
+PUSH_MESSAGES_FILE     = "push_messages.json"
+PENDING_REMINDERS_FILE = "pending_reminders.json"
 
 
 def load_custom_commands():
@@ -41,11 +42,32 @@ def load_features():
     return data
 
 
+_questions_cache = None
+_questions_mtime = 0.0
+
+
 def load_questions():
+    global _questions_cache, _questions_mtime
     if not os.path.exists(QUESTIONS_FILE):
         return {"command": "", "questions": []}
-    with open(QUESTIONS_FILE, "r") as f:
+    mtime = os.path.getmtime(QUESTIONS_FILE)
+    if _questions_cache is None or mtime != _questions_mtime:
+        with open(QUESTIONS_FILE, "r") as f:
+            _questions_cache = json.load(f)
+        _questions_mtime = mtime
+    return _questions_cache
+
+
+def load_pending_reminders():
+    if not os.path.exists(PENDING_REMINDERS_FILE):
+        return []
+    with open(PENDING_REMINDERS_FILE, "r") as f:
         return json.load(f)
+
+
+def save_pending_reminders(data):
+    with open(PENDING_REMINDERS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
 
 
 def load_reminders():
@@ -98,10 +120,41 @@ def resolve_mentions(text, guild):
     return re.sub(r'@([^\s<>@#&!]+)', replace_mention, text)
 
 
+def has_mod_role(member):
+    mod_role = load_features().get("mod_role", "").strip().lower()
+    if not mod_role:
+        return True  # no restriction set
+    return any(role.name.lower() == mod_role for role in member.roles)
+
+
 def resolve_text(text, guild):
     text = resolve_emojis(text, guild)
     text = resolve_mentions(text, guild)
     return text
+
+
+_active_reminders = {}  # user_id -> count of active !remindme timers
+
+REMINDME_MAX = 3  # max concurrent reminders per user
+
+
+async def _fire_reminder(user_id, channel_id, message, delay_seconds):
+    """Sleep then send a reminder, then clean up the pending file and counter."""
+    if delay_seconds > 0:
+        await asyncio.sleep(delay_seconds)
+    channel = bot.get_channel(channel_id)
+    if channel:
+        user = bot.get_user(user_id)
+        mention = user.mention if user else f"<@{user_id}>"
+        await channel.send(f"⏰ {mention} {message}")
+    # Remove this entry from the persistent file
+    pending = load_pending_reminders()
+    pending = [r for r in pending
+               if not (r["user_id"] == user_id and r["message"] == message)]
+    save_pending_reminders(pending)
+    # Decrement counter
+    if _active_reminders.get(user_id, 0) > 0:
+        _active_reminders[user_id] -= 1
 
 
 _reminders_sent = {}  # tracks which reminders fired this minute to avoid duplicates
@@ -136,6 +189,24 @@ async def check_reminders():
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     check_reminders.start()
+
+    # Restore any !remindme timers that survived a redeploy
+    now_ts = datetime.now(timezone.utc).timestamp()
+    surviving = []
+    for entry in load_pending_reminders():
+        remaining = entry["fire_at"] - now_ts
+        if remaining <= 0:
+            # Already overdue — fire immediately
+            asyncio.create_task(_fire_reminder(
+                entry["user_id"], entry["channel_id"], entry["message"], 0))
+        else:
+            _active_reminders[entry["user_id"]] = (
+                _active_reminders.get(entry["user_id"], 0) + 1)
+            asyncio.create_task(_fire_reminder(
+                entry["user_id"], entry["channel_id"], entry["message"], remaining))
+            surviving.append(entry)
+    if surviving:
+        print(f"[Reminders] Restored {len(surviving)} pending !remindme timer(s).")
 
     # Send and clear any queued push messages
     pending = load_push_messages()
@@ -248,6 +319,9 @@ async def spank_cmd(ctx, target: discord.Member = None):
 async def clear_cmd(ctx, amount: int = None):
     if not load_features().get("clear_enabled"):
         return
+    if not has_mod_role(ctx.author):
+        await ctx.send("You need the moderator role to use this command.")
+        return
     if not amount or amount < 1:
         await ctx.send("Usage: `!clear <amount>`")
         return
@@ -268,16 +342,28 @@ async def clear_cmd(ctx, amount: int = None):
 async def remindme_cmd(ctx, minutes: int = None, *, reminder: str = None):
     if not load_features().get("remindme_enabled"):
         return
+    if not has_mod_role(ctx.author):
+        await ctx.send("You need the moderator role to use this command.")
+        return
     if not minutes or not reminder:
         await ctx.send("Usage: `!remindme <minutes> <message>`")
         return
     if minutes < 1 or minutes > 1440:
         await ctx.send("Minutes must be between 1 and 1440.")
         return
+    uid = ctx.author.id
+    if _active_reminders.get(uid, 0) >= REMINDME_MAX:
+        await ctx.send(f"You already have {REMINDME_MAX} active reminders. Wait for one to fire.")
+        return
+    _active_reminders[uid] = _active_reminders.get(uid, 0) + 1
+    fire_at = datetime.now(timezone.utc).timestamp() + minutes * 60
+    pending = load_pending_reminders()
+    pending.append({"user_id": uid, "channel_id": ctx.channel.id,
+                    "message": reminder, "fire_at": fire_at})
+    save_pending_reminders(pending)
     s = "s" if minutes != 1 else ""
     await ctx.send(f"⏰ Got it! I'll remind you in {minutes} minute{s}.")
-    await asyncio.sleep(minutes * 60)
-    await ctx.send(f"⏰ {ctx.author.mention} {reminder}")
+    asyncio.create_task(_fire_reminder(uid, ctx.channel.id, reminder, minutes * 60))
 
 
 @bot.event

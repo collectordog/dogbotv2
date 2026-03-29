@@ -519,6 +519,11 @@ class ManagerApp(tk.Tk):
         self._clear_var    = tk.BooleanVar(value=feats.get("clear_enabled",    False))
         self._remindme_var = tk.BooleanVar(value=feats.get("remindme_enabled", False))
 
+        lbl(p, "Moderator role name (leave blank to allow everyone)", dim=True).pack(fill="x", padx=20)
+        self._mod_role_var = tk.StringVar(value=feats.get("mod_role", ""))
+        self._mod_role_var.trace_add("write", self._save_mod_role)
+        inp(p, self._mod_role_var).pack(padx=20, pady=(2, 10), fill="x")
+
         for var, title, desc in [
             (self._clear_var,
              "!clear <amount>",
@@ -548,6 +553,11 @@ class ManagerApp(tk.Tk):
         save_features(d)
         self.set_status("Saved. Deploy to apply.")
 
+    def _save_mod_role(self, *_):
+        d = load_features()
+        d["mod_role"] = self._mod_role_var.get().strip()
+        save_features(d)
+
     # ── Deploy ────────────────────────────────────────────────────────────────
 
     def deploy(self, clear_push_after=False):
@@ -558,7 +568,8 @@ class ManagerApp(tk.Tk):
                 messagebox.showerror("Deploy failed", r.stderr); return
             if subprocess.run(["git", "diff", "--cached", "--quiet"], cwd=repo).returncode == 0:
                 self.set_status("No changes to deploy."); return
-            subprocess.run(["git", "commit", "-m", "Update bot data"], cwd=repo, check=True)
+            timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+            subprocess.run(["git", "commit", "-m", f"Bot update — {timestamp}"], cwd=repo, check=True)
             subprocess.run(["git", "push"], cwd=repo, check=True)
             if clear_push_after:
                 save_push_messages([])
