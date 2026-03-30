@@ -1,1 +1,9 @@
-[]
+[
+    {
+        "channel_id": 473211044307664907,
+        "prize": "TEST",
+        "end_at": 1774867800.0,
+        "winners": 3,
+        "message_id": null
+    }
+]

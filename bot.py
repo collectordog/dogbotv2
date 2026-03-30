@@ -121,7 +121,8 @@ async def _run_giveaway(entry):
             print(f"[Giveaway] Skipping already-expired giveaway: {entry['prize']}")
             _remove_giveaway_entry(entry)
             return
-        end_ts = int(entry["end_at"])
+        end_ts  = int(entry["end_at"])
+        winners = int(entry.get("winners", 1))
         # Search channel history for an existing message in case of a redeploy mid-giveaway
         existing = None
         async for m in channel.history(limit=50):
@@ -133,9 +134,11 @@ async def _run_giveaway(entry):
             entry["message_id"] = existing.id
             _update_giveaway_entry(entry)
         else:
+            winner_line = f"**Winners:** {winners}\n" if winners > 1 else ""
             msg = await channel.send(
                 f"🎉 **GIVEAWAY** 🎉\n"
                 f"**Prize:** {entry['prize']}\n"
+                f"{winner_line}"
                 f"**Ends:** <t:{end_ts}:F> (<t:{end_ts}:R>)\n"
                 f"React with 🎉 to enter!"
             )
@@ -158,8 +161,13 @@ async def _run_giveaway(entry):
     if not entrants:
         await channel.send(f"🎉 The giveaway for **{entry['prize']}** ended with no entries!")
     else:
-        winner = random.choice(entrants)
-        await channel.send(f"🎉 Congratulations {winner.mention}! You won **{entry['prize']}**!")
+        winners  = int(entry.get("winners", 1))
+        picked   = random.sample(entrants, min(winners, len(entrants)))
+        mentions = ", ".join(w.mention for w in picked)
+        if len(picked) == 1:
+            await channel.send(f"🎉 Congratulations {mentions}! You won **{entry['prize']}**!")
+        else:
+            await channel.send(f"🎉 Congratulations to our {len(picked)} winners: {mentions}! You won **{entry['prize']}**!")
 
     _remove_giveaway_entry(entry)
 
@@ -358,7 +366,7 @@ async def on_message(message):
                 await message.channel.send("No questions available yet.")
                 return
             entry = random.choice(questions)
-            msg = f"Question: {entry['question']} -> Answer ||{entry['answer']}||"
+            msg = f"❓ **{entry['question']}**\n||{entry['answer']}||"
             await message.channel.send(msg)
             return
 

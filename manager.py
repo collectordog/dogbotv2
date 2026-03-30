@@ -405,10 +405,12 @@ class ManagerApp(tk.Tk):
         inp(row, self._dq_time_var, width=6).pack(side="left", padx=(4, 14))
         tk.Label(row, text="Channel:", bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 9)).pack(side="left")
         inp(row, self._dq_ch_var, width=19).pack(side="left", padx=(4, 6))
-        tk.Button(row, text="General Chat", bg=BG_INPUT, fg=FG_DIM,
-                  font=("Segoe UI", 9), relief="flat", cursor="hand2",
-                  command=lambda: self._dq_ch_var.set("472851820448972800")
-                  ).pack(side="left")
+        for _name, _cid in [("General Chat", "472851820448972800"),
+                             ("Bot Commands", "473211044307664907")]:
+            tk.Button(row, text=_name, bg=BG_INPUT, fg=FG_DIM,
+                      font=("Segoe UI", 9), relief="flat", cursor="hand2",
+                      command=lambda c=_cid: self._dq_ch_var.set(c)
+                      ).pack(side="left", padx=(0, 4))
 
         tk.Checkbutton(card, variable=self._dq_enabled_var, bg=BG_CARD,
                        activebackground=BG_CARD, command=self._save_daily_q
@@ -486,6 +488,7 @@ class ManagerApp(tk.Tk):
         presets = [
             ("General Chat",   "472851820448972800"),
             ("Announcements",  "478724610330722305"),
+            ("Bot Commands",   "473211044307664907"),
         ]
         pf = tk.Frame(p, bg=BG)
         pf.pack(padx=20, pady=(0, 10), fill="x")
@@ -558,30 +561,25 @@ class ManagerApp(tk.Tk):
         self._pickgroupboss_var  = tk.BooleanVar(value=feats.get("pickgroupboss_enabled",  False))
 
         for var, title, desc in [
-            (self._rng_var,   "!RNG",
-             'Picks a random number 1–100.\nResponds: "DogBot rolled a X!"'),
-            (self._hug_var,   "!hug @user",
-             "Give someone a hug.\nResponds: \"[sender] hugs [target]! 🤗\""),
-            (self._spank_var, "!spank @user",
-             "Give someone a spank. 🥵🥵\nResponds: \"[sender] spanks [target]!\""),
-            (self._flirt_var, "!flirt @user",
-             "Send a random flirt at someone.\nPicks from bad/funny, smooth, and RS-themed lines."),
-            (self._pickgroupboss_var, "!pickgroupboss",
-             "Picks a random group boss to do together.\nResponds: \"⚔️ Tonight's group boss: [boss]!\""),
+            (self._rng_var,          "!rng",          "Picks a random number 1–100"),
+            (self._hug_var,          "!hug @user",    "Give someone a hug 🤗"),
+            (self._spank_var,        "!spank @user",  "Give someone a spank 🥵"),
+            (self._flirt_var,        "!flirt @user",  "Send a random RS-themed flirt"),
+            (self._pickgroupboss_var,"!pickgroupboss","Pick a random group boss ⚔️"),
         ]:
-            card = tk.Frame(p, bg=BG_CARD)
-            card.pack(padx=20, pady=4, fill="x")
-            info = tk.Frame(card, bg=BG_CARD)
-            info.pack(side="left", padx=12, pady=10, fill="x", expand=True)
-            tk.Label(info, text=title, bg=BG_CARD, fg=FG,
-                     font=("Segoe UI", 11, "bold")).pack(anchor="center")
-            tk.Label(info, text=desc, bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 9),
-                     anchor="center", justify="center").pack(anchor="center")
-            tk.Checkbutton(card, variable=var, bg=BG_CARD,
+            row = tk.Frame(p, bg=BG_CARD)
+            row.pack(padx=20, pady=2, fill="x")
+            tk.Label(row, text=title, bg=BG_CARD, fg=FG,
+                     font=("Consolas", 10, "bold"), width=20, anchor="w"
+                     ).pack(side="left", padx=(10, 4), pady=6)
+            tk.Label(row, text=desc, bg=BG_CARD, fg=FG_DIM,
+                     font=("Segoe UI", 9), anchor="w"
+                     ).pack(side="left", fill="x", expand=True)
+            tk.Checkbutton(row, variable=var, bg=BG_CARD,
                            activebackground=BG_CARD, command=self._save_features
-                           ).pack(side="right", padx=12)
+                           ).pack(side="right", padx=10)
 
-        btn(p, "Save & Deploy", GREEN, self.deploy).pack(padx=20, pady=16, fill="x")
+        btn(p, "Save & Deploy", GREEN, self.deploy).pack(padx=20, pady=(12, 6), fill="x")
 
     def _save_features(self):
         d = load_features()
@@ -598,6 +596,7 @@ class ManagerApp(tk.Tk):
     _GW_PRESETS = {
         472851820448972800: "General Chat",
         478724610330722305: "Announcements",
+        473211044307664907: "Bot Commands",
     }
 
     def _build_giveaway_tab(self, p):
@@ -618,16 +617,29 @@ class ManagerApp(tk.Tk):
         pf = tk.Frame(p, bg=BG)
         pf.pack(padx=20, pady=(0, 8), fill="x")
         for name, ch_id in [("General Chat",  "472851820448972800"),
-                             ("Announcements", "478724610330722305")]:
+                             ("Announcements", "478724610330722305"),
+                             ("Bot Commands",  "473211044307664907")]:
             tk.Button(pf, text=name, bg=BG_CARD, fg=FG_DIM,
                       font=("Segoe UI", 9), relief="flat", cursor="hand2",
                       command=lambda c=ch_id: self._gw_ch.set(c)
                       ).pack(side="left", padx=(0, 6))
 
-        # Prize
-        lbl(p, "Prize", dim=True).pack(fill="x", padx=20)
-        self._gw_prize = tk.StringVar()
-        inp(p, self._gw_prize).pack(padx=20, pady=(2, 8), fill="x")
+        # Prize + Winners row
+        pr = tk.Frame(p, bg=BG)
+        pr.pack(padx=20, pady=(0, 0), fill="x")
+        pr.columnconfigure(0, weight=1)
+
+        tk.Label(pr, text="Prize", bg=BG, fg=FG_DIM, font=("Segoe UI", 9),
+                 anchor="w").grid(row=0, column=0, sticky="w")
+        tk.Label(pr, text="Winners", bg=BG, fg=FG_DIM, font=("Segoe UI", 9),
+                 anchor="w").grid(row=0, column=1, padx=(10, 0), sticky="w")
+
+        self._gw_prize   = tk.StringVar()
+        self._gw_winners = tk.StringVar(value="1")
+        inp(pr, self._gw_prize).grid(row=1, column=0, sticky="ew", pady=(0, 8))
+        ttk.Spinbox(pr, from_=1, to=20, textvariable=self._gw_winners,
+                    width=4, font=("Segoe UI", 10)
+                    ).grid(row=1, column=1, padx=(10, 0), sticky="w", pady=(0, 8))
 
         # End date & time
         lbl(p, "End date & time (your local time)", dim=True).pack(fill="x", padx=20)
@@ -719,7 +731,10 @@ class ManagerApp(tk.Tk):
         if end_at <= datetime.now(timezone.utc).timestamp():
             messagebox.showwarning("Invalid time", "End time must be in the future."); return
         gs = load_giveaways()
-        gs.append({"channel_id": ch_id, "prize": prize, "end_at": end_at, "message_id": None})
+        try:    winners = max(1, int(self._gw_winners.get()))
+        except: winners = 1
+        gs.append({"channel_id": ch_id, "prize": prize, "end_at": end_at,
+                   "winners": winners, "message_id": None})
         save_giveaways(gs)
         self.set_status("Giveaway queued. Deploying...")
         self.deploy()
@@ -733,32 +748,31 @@ class ManagerApp(tk.Tk):
         self._clear_var    = tk.BooleanVar(value=feats.get("clear_enabled",    False))
         self._remindme_var = tk.BooleanVar(value=feats.get("remindme_enabled", False))
 
-        lbl(p, "Moderator role name (leave blank to allow everyone)", dim=True).pack(fill="x", padx=20)
+        mr = tk.Frame(p, bg=BG)
+        mr.pack(padx=20, pady=(0, 10), fill="x")
+        tk.Label(mr, text="Mod role:", bg=BG, fg=FG_DIM,
+                 font=("Segoe UI", 9)).pack(side="left", padx=(0, 8))
         self._mod_role_var = tk.StringVar(value=feats.get("mod_role", ""))
         self._mod_role_var.trace_add("write", self._save_mod_role)
-        inp(p, self._mod_role_var).pack(padx=20, pady=(2, 10), fill="x")
+        inp(mr, self._mod_role_var).pack(side="left", fill="x", expand=True)
 
         for var, title, desc in [
-            (self._clear_var,
-             "!clear <amount>",
-             "Deletes the last X messages (max 100).\nRequires 'Manage Messages' permission."),
-            (self._remindme_var,
-             "!remindme <minutes> <message>",
-             "Sets a personal reminder.\nThe bot pings you after the given number of minutes."),
+            (self._clear_var,    "!clear <amount>",          "Delete last X messages (max 100)"),
+            (self._remindme_var, "!remindme <min> <message>","Ping you after X minutes"),
         ]:
-            card = tk.Frame(p, bg=BG_CARD)
-            card.pack(padx=20, pady=4, fill="x")
-            info = tk.Frame(card, bg=BG_CARD)
-            info.pack(side="left", padx=12, pady=10, fill="x", expand=True)
-            tk.Label(info, text=title, bg=BG_CARD, fg=FG,
-                     font=("Segoe UI", 11, "bold")).pack(anchor="center")
-            tk.Label(info, text=desc, bg=BG_CARD, fg=FG_DIM, font=("Segoe UI", 9),
-                     anchor="center", justify="center").pack(anchor="center")
-            tk.Checkbutton(card, variable=var, bg=BG_CARD,
+            row = tk.Frame(p, bg=BG_CARD)
+            row.pack(padx=20, pady=2, fill="x")
+            tk.Label(row, text=title, bg=BG_CARD, fg=FG,
+                     font=("Consolas", 10, "bold"), width=26, anchor="w"
+                     ).pack(side="left", padx=(10, 4), pady=6)
+            tk.Label(row, text=desc, bg=BG_CARD, fg=FG_DIM,
+                     font=("Segoe UI", 9), anchor="w"
+                     ).pack(side="left", fill="x", expand=True)
+            tk.Checkbutton(row, variable=var, bg=BG_CARD,
                            activebackground=BG_CARD, command=self._save_utility
-                           ).pack(side="right", padx=12)
+                           ).pack(side="right", padx=10)
 
-        btn(p, "Save & Deploy", GREEN, self.deploy).pack(padx=20, pady=16, fill="x")
+        btn(p, "Save & Deploy", GREEN, self.deploy).pack(padx=20, pady=(12, 6), fill="x")
 
     def _save_utility(self):
         d = load_features()
