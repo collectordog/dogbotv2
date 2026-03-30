@@ -496,6 +496,52 @@ _FLIRTS = [
 ]
 
 
+@bot.command(name="kill")
+async def kill_cmd(ctx, target: discord.Member = None):
+    if not load_features().get("kill_enabled"):
+        return
+    if not target:
+        await ctx.send("Usage: `!kill @user`")
+        return
+    outcome = random.choice([
+        f"{ctx.author.mention} tried to kill {target.mention} but killed themselves instead.",
+        f"{ctx.author.mention} tried to kill {target.mention} and succeeded, but at what cost?",
+        f"{ctx.author.mention} tried to kill {target.mention}. Finally, we got rid of them!",
+    ])
+    await ctx.send(outcome)
+
+
+_RPS_EMOJI  = {"rock": "🪨", "paper": "📄", "scissors": "✂️"}
+_RPS_BEATS  = {"rock": "scissors", "paper": "rock", "scissors": "paper"}
+_RPS_ALIAS  = {"r": "rock", "p": "paper", "s": "scissors",
+               "stone": "rock", "paper": "paper", "scissor": "scissors"}
+
+
+@bot.command(name="rps")
+async def rps_cmd(ctx, choice: str = None):
+    if not load_features().get("rps_enabled"):
+        return
+    if not choice:
+        await ctx.send("Usage: `!rps <rock / paper / scissors>`")
+        return
+    player = _RPS_ALIAS.get(choice.lower(), choice.lower())
+    if player not in _RPS_EMOJI:
+        await ctx.send("Choose **rock**, **paper**, or **scissors**.")
+        return
+    bot_pick = random.choice(["rock", "paper", "scissors"])
+    pe, be   = _RPS_EMOJI[player], _RPS_EMOJI[bot_pick]
+    if player == bot_pick:
+        result = "It's a tie! 🤝"
+    elif _RPS_BEATS[player] == bot_pick:
+        result = f"{ctx.author.display_name} wins! 🎉"
+    else:
+        result = "DogBot wins! 🤖"
+    await ctx.send(
+        f"{pe} **{ctx.author.display_name}** used **{player}** — "
+        f"{be} **DogBot** used **{bot_pick}**. {result}"
+    )
+
+
 @bot.command(name="flirt")
 async def flirt_cmd(ctx, target: discord.Member = None):
     if not load_features().get("flirt_enabled"):

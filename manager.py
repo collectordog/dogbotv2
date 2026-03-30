@@ -558,14 +558,18 @@ class ManagerApp(tk.Tk):
         self._hug_var            = tk.BooleanVar(value=feats.get("hug_enabled",            False))
         self._spank_var          = tk.BooleanVar(value=feats.get("spank_enabled",          False))
         self._flirt_var          = tk.BooleanVar(value=feats.get("flirt_enabled",          False))
+        self._kill_var           = tk.BooleanVar(value=feats.get("kill_enabled",           False))
+        self._rps_var            = tk.BooleanVar(value=feats.get("rps_enabled",            False))
         self._pickgroupboss_var  = tk.BooleanVar(value=feats.get("pickgroupboss_enabled",  False))
 
         for var, title, desc in [
-            (self._rng_var,          "!rng",          "Picks a random number 1–100"),
-            (self._hug_var,          "!hug @user",    "Give someone a hug 🤗"),
-            (self._spank_var,        "!spank @user",  "Give someone a spank 🥵"),
-            (self._flirt_var,        "!flirt @user",  "Send a random RS-themed flirt"),
-            (self._pickgroupboss_var,"!pickgroupboss","Pick a random group boss ⚔️"),
+            (self._rng_var,          "!rng",           "Picks a random number 1–100"),
+            (self._hug_var,          "!hug @user",     "Give someone a hug 🤗"),
+            (self._spank_var,        "!spank @user",   "Give someone a spank 🥵"),
+            (self._flirt_var,        "!flirt @user",   "Send a random RS-themed flirt"),
+            (self._kill_var,         "!kill @user",    "Attempt to kill someone — 3 random outcomes"),
+            (self._rps_var,          "!rps <choice>",  "Rock paper scissors against DogBot 🪨📄✂️"),
+            (self._pickgroupboss_var,"!pickgroupboss", "Pick a random group boss ⚔️"),
         ]:
             row = tk.Frame(p, bg=BG_CARD)
             row.pack(padx=20, pady=2, fill="x")
@@ -587,6 +591,8 @@ class ManagerApp(tk.Tk):
         d["hug_enabled"]           = self._hug_var.get()
         d["spank_enabled"]         = self._spank_var.get()
         d["flirt_enabled"]         = self._flirt_var.get()
+        d["kill_enabled"]          = self._kill_var.get()
+        d["rps_enabled"]           = self._rps_var.get()
         d["pickgroupboss_enabled"] = self._pickgroupboss_var.get()
         save_features(d)
         self.set_status("Saved. Deploy to apply.")
