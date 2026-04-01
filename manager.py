@@ -499,10 +499,29 @@ class ManagerApp(tk.Tk):
                       ).pack(side="left", padx=(0, 6))
 
         lbl(p, "Message  (supports @mentions and :emojis:)", dim=True).pack(fill="x", padx=20)
-        self._push_text = tk.Text(p, height=7, bg=BG_INPUT, fg=FG,
+
+        # Formatting toolbar
+        tb = tk.Frame(p, bg=BG_CARD)
+        tb.pack(padx=20, pady=(2, 0), fill="x")
+        for label, cmd in [
+            ("B",  self._push_bold),
+            ("I",  self._push_italic),
+            ("U̲",  self._push_underline),
+        ]:
+            tk.Button(tb, text=label, bg=BG_CARD, fg=FG,
+                      font=("Segoe UI", 10, "bold"), relief="flat",
+                      cursor="hand2", padx=10, pady=3,
+                      command=cmd).pack(side="left")
+        tk.Frame(tb, bg=GREY, width=1).pack(side="left", fill="y", padx=6, pady=4)
+        tk.Button(tb, text="😀  Emoji", bg=BG_CARD, fg=FG_DIM,
+                  font=("Segoe UI", 9), relief="flat", cursor="hand2",
+                  padx=8, pady=3,
+                  command=self._open_emoji_picker).pack(side="left")
+
+        self._push_text = tk.Text(p, height=6, bg=BG_INPUT, fg=FG,
                                   insertbackground=FG, relief="flat",
                                   font=("Consolas", 11), wrap="word")
-        self._push_text.pack(padx=20, pady=(2, 10), fill="x")
+        self._push_text.pack(padx=20, pady=(0, 10), fill="x")
 
         # Show any already queued messages
         self._push_queue_lbl = tk.Label(p, text="", bg=BG, fg=FG_DIM,
@@ -547,6 +566,56 @@ class ManagerApp(tk.Tk):
         save_push_messages([])
         self._refresh_push_label()
         self.set_status("Queue cleared.")
+
+    # ── Push editor helpers ────────────────────────────────────────────────────
+
+    def _push_wrap(self, marker):
+        try:
+            start = self._push_text.index("sel.first")
+            end   = self._push_text.index("sel.last")
+            text  = self._push_text.get(start, end)
+            self._push_text.delete(start, end)
+            self._push_text.insert(start, f"{marker}{text}{marker}")
+        except tk.TclError:
+            pos = self._push_text.index("insert")
+            self._push_text.insert(pos, f"{marker}{marker}")
+            self._push_text.mark_set("insert", f"{pos}+{len(marker)}c")
+        self._push_text.focus_set()
+
+    def _push_bold(self):      self._push_wrap("**")
+    def _push_italic(self):    self._push_wrap("*")
+    def _push_underline(self): self._push_wrap("__")
+
+    _EMOJIS = [
+        "😀","😁","😂","🤣","😅","😆","😎","🥰","😍","🤩",
+        "😏","😤","😭","🥺","😱","🤔","😬","🥳","😔","💀",
+        "😈","🤝","🫡","👀","💪","👏","🙌","🔥","❤️","💜",
+        "💚","💙","🧡","⭐","🌟","✨","💯","🎉","🎊","✅",
+        "❌","⚠️","📢","📌","🔔","💬","🏆","🎯","🎮","🪙",
+        "💎","💰","🔮","⚔️","🛡️","🗡️","🏹","🪄","🧙","⚡",
+        "🌊","🐉","💣","🏰","🗺️","🧪","🌿","🍀","🦴","🐾",
+    ]
+
+    def _open_emoji_picker(self):
+        if hasattr(self, "_emoji_win") and self._emoji_win.winfo_exists():
+            self._emoji_win.lift(); return
+        win = tk.Toplevel(self)
+        win.title("Emoji Picker")
+        win.configure(bg=BG)
+        win.resizable(False, False)
+        self._emoji_win = win
+        cols = 10
+        for i, emoji in enumerate(self._EMOJIS):
+            r, c = divmod(i, cols)
+            tk.Button(win, text=emoji, font=("Segoe UI", 15),
+                      bg=BG, activebackground=BG_CARD,
+                      relief="flat", cursor="hand2", padx=2, pady=2,
+                      command=lambda e=emoji: self._insert_emoji(e)
+                      ).grid(row=r, column=c, padx=1, pady=1)
+
+    def _insert_emoji(self, emoji):
+        self._push_text.insert("insert", emoji)
+        self._push_text.focus_set()
 
     # ── Fun Features ──────────────────────────────────────────────────────────
 
