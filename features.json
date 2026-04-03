@@ -13,5 +13,6 @@
     "daily_question_channel": 472851820448972800,
     "flirt_enabled": true,
     "kill_enabled": true,
-    "rps_enabled": true
+    "rps_enabled": true,
+    "eightball_enabled": true
 }
