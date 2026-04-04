@@ -4,6 +4,7 @@ import json
 import os
 import re
 import random
+import time
 from discord.ext import commands, tasks
 from datetime import datetime, timezone, timedelta
 from dotenv import load_dotenv
@@ -13,6 +14,7 @@ load_dotenv()
 intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
+intents.reactions = True
 
 bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
@@ -23,6 +25,9 @@ FEATURES_FILE          = "features.json"
 PUSH_MESSAGES_FILE     = "push_messages.json"
 PENDING_REMINDERS_FILE = "pending_reminders.json"
 GIVEAWAYS_FILE         = "giveaways.json"
+QUESTION_TRACKING_FILE = "question_tracking.json"
+
+QUESTION_REACTION_WINDOW = 24 * 60 * 60  # seconds
 
 
 def load_custom_commands():
@@ -66,6 +71,48 @@ def load_questions():
             _questions_cache = json.load(f)
         _questions_mtime = mtime
     return _questions_cache
+
+
+def save_questions(data):
+    global _questions_cache, _questions_mtime
+    with open(QUESTIONS_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+    _questions_cache = data
+    _questions_mtime = os.path.getmtime(QUESTIONS_FILE)
+
+
+def load_question_tracking():
+    if not os.path.exists(QUESTION_TRACKING_FILE):
+        return {}
+    with open(QUESTION_TRACKING_FILE, "r") as f:
+        return json.load(f)
+
+
+def save_question_tracking(data):
+    with open(QUESTION_TRACKING_FILE, "w") as f:
+        json.dump(data, f, indent=4)
+
+
+def _cleanup_question_tracking():
+    """Remove expired entries from the tracking file."""
+    now_ts = time.time()
+    tracking = load_question_tracking()
+    cleaned = {mid: entry for mid, entry in tracking.items() if entry["expires_at"] > now_ts}
+    if len(cleaned) != len(tracking):
+        save_question_tracking(cleaned)
+
+
+async def _post_question(channel, entry):
+    """Post a question, add reactions, and register it for score tracking."""
+    msg = await channel.send(f"❓ **{entry['question']}**\n||{entry['answer']}||")
+    await msg.add_reaction("✅")
+    await msg.add_reaction("❌")
+    tracking = load_question_tracking()
+    tracking[str(msg.id)] = {
+        "question": entry["question"],
+        "expires_at": time.time() + QUESTION_REACTION_WINDOW,
+    }
+    save_question_tracking(tracking)
 
 
 def load_pending_reminders():
@@ -287,7 +334,7 @@ async def check_reminders():
                 questions = load_questions().get("questions", [])
                 if questions:
                     q = random.choice(questions)
-                    await channel.send(f"❓ **{q['question']}**\n||{q['answer']}||")
+                    await _post_question(channel, q)
 
     for i, reminder in enumerate(load_reminders()):
         h, m = map(int, reminder["time"].split(":"))
@@ -307,6 +354,7 @@ async def check_reminders():
 async def on_ready():
     print(f"Logged in as {bot.user} (ID: {bot.user.id})")
     check_reminders.start()
+    _cleanup_question_tracking()
 
     # Restore any !remindme timers that survived a redeploy
     now_ts = datetime.now(timezone.utc).timestamp()
@@ -367,8 +415,7 @@ async def on_message(message):
                 await message.channel.send("No questions available yet.")
                 return
             entry = random.choice(questions)
-            msg = f"❓ **{entry['question']}**\n||{entry['answer']}||"
-            await message.channel.send(msg)
+            await _post_question(message.channel, entry)
             return
 
         # Custom commands
@@ -384,37 +431,92 @@ async def on_message(message):
     await bot.process_commands(message)
 
 
+def _update_question_score(question_text, correct_delta=0, incorrect_delta=0):
+    data = load_questions()
+    for q in data.get("questions", []):
+        if q["question"] == question_text:
+            q["correct"]   = max(0, q.get("correct",   0) + correct_delta)
+            q["incorrect"] = max(0, q.get("incorrect", 0) + incorrect_delta)
+            save_questions(data)
+            break
+
+
+@bot.event
+async def on_raw_reaction_add(payload):
+    if payload.user_id == bot.user.id:
+        return
+    tracking = load_question_tracking()
+    entry = tracking.get(str(payload.message_id))
+    if not entry or time.time() > entry["expires_at"]:
+        return
+    emoji = str(payload.emoji)
+    if emoji == "✅":
+        _update_question_score(entry["question"], correct_delta=1)
+    elif emoji == "❌":
+        _update_question_score(entry["question"], incorrect_delta=1)
+
+
+@bot.event
+async def on_raw_reaction_remove(payload):
+    if payload.user_id == bot.user.id:
+        return
+    tracking = load_question_tracking()
+    entry = tracking.get(str(payload.message_id))
+    if not entry or time.time() > entry["expires_at"]:
+        return
+    emoji = str(payload.emoji)
+    if emoji == "✅":
+        _update_question_score(entry["question"], correct_delta=-1)
+    elif emoji == "❌":
+        _update_question_score(entry["question"], incorrect_delta=-1)
+
+
 @bot.command(name="commands")
 async def commands_list(ctx):
-    features  = load_features()
-    custom    = load_custom_commands()
-    q_data    = load_questions()
-    lines     = ["**Bot Commands**"]
+    features = load_features()
+    custom   = load_custom_commands()
+    q_data   = load_questions()
+    lines    = ["**🐾 DogBot Commands**"]
 
+    # Custom commands
     if custom:
-        lines.append("\n**Custom:**")
-        for cmd, resp in custom.items():
-            short = resp[:60] + "…" if len(resp) > 60 else resp
-            lines.append(f"`!{cmd}` — {short}")
+        lines.append("\n**📝 Custom:**")
+        for cmd, entry in custom.items():
+            tag = " `[mod]`" if entry.get("mod_only") else ""
+            lines.append(f"`!{cmd}`{tag}")
 
+    # Fun commands
     fun = []
     if features.get("rng_enabled"):
-        fun.append("`!rng` — Rolls a random number between 1–100")
+        fun.append("`!rng` — Random number 1–100")
     if features.get("hug_enabled"):
-        fun.append("`!hug @user` — Give someone a hug")
+        fun.append("`!hug @user` — Give someone a hug 🤗")
+    if features.get("spank_enabled"):
+        fun.append("`!spank @user` — Give someone a spank 🥵")
+    if features.get("flirt_enabled"):
+        fun.append("`!flirt @user` — Send a random flirt 💘")
+    if features.get("kill_enabled"):
+        fun.append("`!kill @user` — Attempt to kill someone ☠️")
+    if features.get("rps_enabled"):
+        fun.append("`!rps <rock/paper/scissors>` — Play against DogBot 🪨📄✂️")
+    if features.get("pickgroupboss_enabled"):
+        fun.append("`!pickgroupboss` — Pick a random group boss ⚔️")
+    if features.get("eightball_enabled"):
+        fun.append("`!8ball <question>` — DogBot answers your question 🎱")
     if q_data.get("command"):
-        fun.append(f"`!{q_data['command']}` — Random trivia question with spoiler answer")
+        fun.append(f"`!{q_data['command']}` — Random RS trivia question ❓")
     if fun:
-        lines.append("\n**Fun:**")
+        lines.append("\n**🎮 Fun:**")
         lines.extend(fun)
 
+    # Utility commands
     util = []
     if features.get("clear_enabled"):
-        util.append("`!clear <amount>` — Delete the last X messages (max 100)")
+        util.append("`!clear <amount>` — Delete last X messages (mod only)")
     if features.get("remindme_enabled"):
-        util.append("`!remindme <minutes> <message>` — Get a personal reminder")
+        util.append("`!remindme <minutes> <message>` — Set a personal reminder ⏰")
     if util:
-        lines.append("\n**Utility:**")
+        lines.append("\n**🔧 Utility:**")
         lines.extend(util)
 
     await ctx.send("\n".join(lines))

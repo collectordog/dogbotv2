@@ -416,6 +416,59 @@ class ManagerApp(tk.Tk):
                        activebackground=BG_CARD, command=self._save_daily_q
                        ).pack(side="right", padx=12)
 
+        # ── Score Stats ───────────────────────────────────────────────────────
+        tk.Frame(p, bg=GREY, height=1).pack(fill="x", padx=20, pady=(12, 8))
+
+        hdr = tk.Frame(p, bg=BG)
+        hdr.pack(padx=20, fill="x")
+        tk.Label(hdr, text="Question Scores", bg=BG, fg=FG,
+                 font=("Segoe UI", 10, "bold")).pack(side="left")
+        tk.Button(hdr, text="↺ Refresh", bg=BG_INPUT, fg=FG_DIM,
+                  font=("Segoe UI", 9), relief="flat", cursor="hand2",
+                  command=self._refresh_q_stats).pack(side="right")
+
+        cols = ("Question", "✅", "❌", "Difficulty")
+        self._stats_tree = ttk.Treeview(p, columns=cols, show="headings", height=8)
+        self._stats_tree.heading("Question",   text="Question")
+        self._stats_tree.heading("✅",          text="✅")
+        self._stats_tree.heading("❌",          text="❌")
+        self._stats_tree.heading("Difficulty", text="Difficulty")
+        self._stats_tree.column("Question",   width=340, anchor="w")
+        self._stats_tree.column("✅",          width=40,  anchor="center")
+        self._stats_tree.column("❌",          width=40,  anchor="center")
+        self._stats_tree.column("Difficulty", width=80,  anchor="center")
+
+        style = ttk.Style()
+        style.configure("Treeview",
+                        background=BG_INPUT, foreground=FG,
+                        fieldbackground=BG_INPUT, rowheight=22)
+        style.configure("Treeview.Heading",
+                        background=BG_CARD, foreground=FG_DIM)
+        style.map("Treeview", background=[("selected", ACCENT)])
+
+        sb = ttk.Scrollbar(p, orient="vertical", command=self._stats_tree.yview)
+        self._stats_tree.configure(yscrollcommand=sb.set)
+        self._stats_tree.pack(padx=(20, 0), fill="x", expand=False)
+        sb.pack(side="right", fill="y", padx=(0, 20))
+
+        self._refresh_q_stats()
+
+    def _refresh_q_stats(self):
+        for row in self._stats_tree.get_children():
+            self._stats_tree.delete(row)
+        qs = load_questions().get("questions", [])
+        # Only show questions that have been answered at least once
+        scored = [q for q in qs if q.get("correct", 0) + q.get("incorrect", 0) > 0]
+        # Sort hardest first (highest incorrect ratio)
+        scored.sort(key=lambda q: q.get("incorrect", 0) / (q.get("correct", 0) + q.get("incorrect", 0)), reverse=True)
+        for q in scored:
+            correct   = q.get("correct",   0)
+            incorrect = q.get("incorrect", 0)
+            total     = correct + incorrect
+            pct       = f"{incorrect / total * 100:.0f}%" if total else "—"
+            short_q   = q["question"][:55] + "…" if len(q["question"]) > 55 else q["question"]
+            self._stats_tree.insert("", "end", values=(short_q, correct, incorrect, pct))
+
     def _save_daily_q(self, *_):
         d = load_features()
         d["daily_question_enabled"] = self._dq_enabled_var.get()
