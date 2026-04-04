@@ -928,6 +928,314 @@
         {
             "question": "Which colour is the rarest type of reward from Prawn balls?",
             "answer": "Golden (Golden mystery egg and Golden prawn cracker, both at 1/200)"
+        },
+        {
+            "question": "What is the total XP boost from wearing the full Farmer's outfit?",
+            "answer": "6%"
+        },
+        {
+            "question": "What are the requirements to wear the Master farmer outfit?",
+            "answer": "80 Farming and 20 Invention"
+        },
+        {
+            "question": "What XP bonus do Farming urns provide when carried in the inventory?",
+            "answer": "20% (25% with an urn enhancer)"
+        },
+        {
+            "question": "What chance does the Farming cape give to instantly harvest all remaining resources from a crop per action?",
+            "answer": "5%"
+        },
+        {
+            "question": "What does the Farming master cape automatically treat farming patches with for free?",
+            "answer": "Supercompost"
+        },
+        {
+            "question": "What chance does the Juju farming potion give to gather an additional herb per action at herb patches?",
+            "answer": "33%"
+        },
+        {
+            "question": "What chance do Magic secateurs give to save a harvest life when gathering from allotments, hops, and herb patches?",
+            "answer": "10%"
+        },
+        {
+            "question": "Which Farming item gives a 10% chance to recover seeds when harvesting a fully grown patch?",
+            "answer": "Scroll of life"
+        },
+        {
+            "question": "Which NPC found at farming patches can note harvested produce for free?",
+            "answer": "Tool leprechaun"
+        },
+        {
+            "question": "Which item clears a harvestable farming patch instantly, giving produce as bank notes?",
+            "answer": "Patch bomb"
+        },
+        {
+            "question": "Which relic power prevents herb patches and mushroom patches from becoming diseased?",
+            "answer": "Pharm Ecology"
+        },
+        {
+            "question": "How frequently do Demon Flash Mobs spawn?",
+            "answer": "Hourly"
+        },
+        {
+            "question": "How many imp heralds make up a Demon Flash Mob?",
+            "answer": "6"
+        },
+        {
+            "question": "Which is the only prayer that does NOT make the demon boss stronger when used?",
+            "answer": "Protect Item"
+        },
+        {
+            "question": "How frequently do Goblin Raids spawn?",
+            "answer": "Every 30 minutes"
+        },
+        {
+            "question": "Who leads the Goblin Raiders in a Goblin Raid?",
+            "answer": "Hollowtoof"
+        },
+        {
+            "question": "Are Goblin Raids free-to-play?",
+            "answer": "Yes"
+        },
+        {
+            "question": "How many Goblin Raiders must be killed before Hollowtoof becomes attackable?",
+            "answer": "10"
+        },
+        {
+            "question": "Which NPC awards players resources after a Goblin Raid is defeated?",
+            "answer": "Commander Yodri"
+        },
+        {
+            "question": "What is described as the strongest non-degradable melee armour available to free-to-play players, dropped by Hollowtoof?",
+            "answer": "Gud raider equipment"
+        },
+        {
+            "question": "Which quest serves as an introduction to the Summoning skill?",
+            "answer": "Wolf Whistle"
+        },
+        {
+            "question": "What is the maximum Summoning level free-to-play players can train to?",
+            "answer": "5"
+        },
+        {
+            "question": "Who is the Summoning skill master introduced during the Wolf Whistle quest?",
+            "answer": "Pikkupstix"
+        },
+        {
+            "question": "From which realm are familiars summoned in the Summoning skill?",
+            "answer": "Spirit Plane"
+        },
+        {
+            "question": "At which structure must players infuse items to create Summoning pouches?",
+            "answer": "Obelisk"
+        },
+        {
+            "question": "What total XP boost does wearing the full Shaman's outfit provide?",
+            "answer": "6%"
+        },
+        {
+            "question": "How many scrolls does one Summoning pouch convert into at an obelisk?",
+            "answer": "10"
+        },
+        {
+            "question": "What non-tradeable ingredient is always required when making any Summoning pouch?",
+            "answer": "Charms"
+        },
+        {
+            "question": "What common ingredient is required for most Summoning pouches, with anywhere from 1 to 222 needed per pouch?",
+            "answer": "Spirit shards"
+        },
+        {
+            "question": "What replaces spirit shards when creating pouches that use elder charms, such as the nihil familiars?",
+            "answer": "Elder energy"
+        },
+        {
+            "question": "Besides interacting with obelisks, how else can players restore Summoning points?",
+            "answer": "Summoning potion or super restore"
+        },
+        {
+            "question": "By how much does the Spirit Weaver relic power increase base XP from creating Summoning pouches?",
+            "answer": "50%"
+        },
+        {
+            "question": "How many familiars can a player have summoned at the same time?",
+            "answer": "Only one"
+        },
+        {
+            "question": "In which year was the Summoning skill released?",
+            "answer": "2008"
+        },
+        {
+            "question": "Which Summoning familiar can be created at level 4, using gold charms and raw chicken?",
+            "answer": "Dreadfowl"
+        },
+        {
+            "question": "What are the four types of charms used in the Summoning skill?",
+            "answer": "Gold, green, crimson and blue"
+        },
+        {
+            "question": "What skill type is Summoning classified as?",
+            "answer": "Combat"
+        },
+        {
+            "question": "What is the name of the Summoning skilling pet?",
+            "answer": "Shamini"
+        },
+        {
+            "question": "In which region is the Barrows located?",
+            "answer": "Morytania"
+        },
+        {
+            "question": "What are the names of the original six Barrows Brothers?",
+            "answer": "Ahrim, Dharok, Guthan, Karil, Torag and Verac"
+        },
+        {
+            "question": "Which quest adds Akrisae the Doomed to the Barrows Brothers encounter?",
+            "answer": "Ritual of the Mahjarrat"
+        },
+        {
+            "question": "Which quest adds Linza the Disgraced to the Barrows Brothers encounter?",
+            "answer": "Kindred Spirits"
+        },
+        {
+            "question": "Which item has a direct teleport to the Barrows, obtained from The Branches of Darkmeyer quest?",
+            "answer": "Drakan's medallion"
+        },
+        {
+            "question": "How many players can participate in the Barrows: Rise of the Six?",
+            "answer": "1 to 4"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Blighted'?",
+            "answer": "Ahrim the Blighted"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Wretched'?",
+            "answer": "Dharok the Wretched"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Infested'?",
+            "answer": "Guthan the Infested"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Tainted'?",
+            "answer": "Karil the Tainted"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Corrupted'?",
+            "answer": "Torag the Corrupted"
+        },
+        {
+            "question": "Which Barrows Brother is nicknamed 'the Defiled'?",
+            "answer": "Verac the Defiled"
+        },
+        {
+            "question": "Which additional Barrows member is nicknamed 'the Disgraced', unlocked after Kindred Spirits?",
+            "answer": "Linza the Disgraced"
+        },
+        {
+            "question": "Which additional Barrows member is nicknamed 'the Doomed', unlocked after Ritual of the Mahjarrat?",
+            "answer": "Akrisae the Doomed"
+        },
+        {
+            "question": "Which NPC personality can be found at the Barrows?",
+            "answer": "Strange Old Man"
+        },
+        {
+            "question": "What was the Wilderness previously known as in RuneScape lore?",
+            "answer": "Forinthry"
+        },
+        {
+            "question": "Which NPC near the Edgeville bank must players speak to in order to opt into PvP in the Wilderness?",
+            "answer": "Vala"
+        },
+        {
+            "question": "In which year was the Wilderness released?",
+            "answer": "2001"
+        },
+        {
+            "question": "What are two common nicknames for the Wilderness?",
+            "answer": "Wildy and Wild"
+        },
+        {
+            "question": "Which ring, unlocked after Spirit of Summer, lets players access the Spirit Realm from the Wilderness regardless of Wilderness level?",
+            "answer": "Jennica's ring"
+        },
+        {
+            "question": "What type of terrain does the deep northern Wilderness gradually become?",
+            "answer": "Frozen wasteland"
+        },
+        {
+            "question": "How long does a Teleport Block spell disable all teleportation for?",
+            "answer": "5 minutes"
+        },
+        {
+            "question": "After completing which set of achievements can players choose their destination when using Wilderness obelisks?",
+            "answer": "Hard Wilderness achievements"
+        },
+        {
+            "question": "Where do skulled players respawn if they die in the dangerous Wilderness?",
+            "answer": "Edgeville"
+        },
+        {
+            "question": "What did Jagex sell at Diango's stall as a joke for the 2008 April Fools event, in response to player demands for a dragon kiteshield?",
+            "answer": "A dragon kite (toy kite)"
+        },
+        {
+            "question": "The 2016 Thanksgiving turkey-finding event was described as similar to which existing D&D?",
+            "answer": "Penguin Hide and Seek"
+        },
+        {
+            "question": "What currency is earned through skilling activities in the 2025 Christmas Village?",
+            "answer": "Christmas spirit"
+        },
+        {
+            "question": "What is the name of the boss that appears in the Snowball Arena 45 minutes past each hour in the 2025 Christmas event?",
+            "answer": "Snowverload"
+        },
+        {
+            "question": "Which race rules Morytania?",
+            "answer": "Vampyres"
+        },
+        {
+            "question": "What is the capital city of Morytania?",
+            "answer": "Darkmeyer"
+        },
+        {
+            "question": "Which quest must players complete to first access Morytania?",
+            "answer": "Priest in Peril"
+        },
+        {
+            "question": "Which type of creature inhabits Canifis, disguised as humans?",
+            "answer": "Werewolves"
+        },
+        {
+            "question": "Which Morytanian port town is inhabited almost entirely by ghosts who charge 2 ecto-tokens for entry?",
+            "answer": "Port Phasmatys"
+        },
+        {
+            "question": "Which town is described as the last free human settlement in Morytania?",
+            "answer": "Burgh de Rott"
+        },
+        {
+            "question": "Which Morytanian castle is home to the Drakan overlords and is the main setting of River of Blood?",
+            "answer": "Castle Drakan"
+        },
+        {
+            "question": "What is the dominant religion of Morytania?",
+            "answer": "Zamorakian"
+        },
+        {
+            "question": "Where in Morytania can players fight Araxxor and Araxxi?",
+            "answer": "Araxyte Hive"
+        },
+        {
+            "question": "Which Morytanian Archaeology dig site was the first settlement of the icyene race when they arrived in Gielinor?",
+            "answer": "Everlight"
+        },
+        {
+            "question": "What fairy ring code takes players to Canifis in Morytania?",
+            "answer": "CKS"
         }
     ]
 }
