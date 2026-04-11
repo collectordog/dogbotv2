@@ -926,3 +926,36 @@ Everlight
 
 What fairy ring code takes players to Canifis in Morytania?
 CKS
+
+How much do Capes of Accomplishment cost to buy?
+99,000 coins
+
+What causes a skillcape to become trimmed?
+A second level 99 skill
+
+Which skillcape perk prevents all food from burning while cooking?
+Cooking cape
+
+Who sells the Agility cape at the Brimhaven Agility Arena?
+Cap'n Izzy No-Beard
+
+Which skillcape provides unlimited teleports to any resource dungeon?
+Dungeoneering cape
+
+Who sells the Farming cape and where?
+Martin the Master Gardener in Draynor Village
+
+Who sells the Dungeoneering cape south of Daemonheim?
+Thok, Master of Dungeoneering
+
+Which skillcape gives a 2% chance for degradable items not to degrade?
+Attack cape
+
+Who sells the Divination cape south of Draynor Village?
+Orla Fairweather
+
+How much does a Cape of Accomplishment cost when wearing an activated ring of charos?
+92,000 coins
+
+What level is required to buy a Master Cape of Accomplishment?
+Level 120
