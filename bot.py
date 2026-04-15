@@ -4,6 +4,7 @@ import json
 import os
 import re
 import random
+import subprocess
 import time
 from discord.ext import commands, tasks
 from datetime import datetime, timezone, timedelta
@@ -307,6 +308,45 @@ async def _fire_reminder(user_id, channel_id, message, delay_seconds):
         _active_reminders[user_id] -= 1
 
 
+_scores_dirty     = False
+_last_score_push  = 0.0
+SCORE_PUSH_INTERVAL = 3600  # push at most once per hour
+
+
+def _push_scores_to_github():
+    global _scores_dirty, _last_score_push
+    token = os.getenv("GITHUB_TOKEN")
+    if not token:
+        print("[Scores] GITHUB_TOKEN not set — skipping score push.")
+        return
+    try:
+        remote = subprocess.run(
+            ["git", "remote", "get-url", "origin"],
+            capture_output=True, text=True, check=True
+        ).stdout.strip()
+        if not remote.startswith("https://"):
+            print("[Scores] Remote is not HTTPS — skipping score push.")
+            return
+        authed = remote.replace("https://", f"https://{token}@")
+        subprocess.run(["git", "config", "user.email", "dogbot@railway.app"], check=True)
+        subprocess.run(["git", "config", "user.name",  "DogBot"],             check=True)
+        subprocess.run(["git", "pull", "--rebase", authed, "master"],
+                       capture_output=True)
+        subprocess.run(["git", "add", QUESTIONS_FILE], check=True)
+        if subprocess.run(["git", "diff", "--cached", "--quiet"]).returncode == 0:
+            print("[Scores] No score changes to push.")
+            _scores_dirty = False
+            return
+        ts = datetime.now().strftime("%Y-%m-%d %H:%M")
+        subprocess.run(["git", "commit", "-m", f"Score update — {ts}"], check=True)
+        subprocess.run(["git", "push", authed, "master"],                check=True)
+        _scores_dirty    = False
+        _last_score_push = time.time()
+        print("[Scores] Score updates pushed to GitHub.")
+    except Exception as e:
+        print(f"[Scores] Push failed: {e}")
+
+
 _reminders_sent = {}  # tracks which reminders fired this minute to avoid duplicates
 
 @tasks.loop(seconds=30)
@@ -335,6 +375,10 @@ async def check_reminders():
                 if questions:
                     q = random.choice(questions)
                     await _post_question(channel, q)
+
+    # Hourly score push back to GitHub
+    if _scores_dirty and time.time() - _last_score_push > SCORE_PUSH_INTERVAL:
+        await asyncio.get_event_loop().run_in_executor(None, _push_scores_to_github)
 
     for i, reminder in enumerate(load_reminders()):
         h, m = map(int, reminder["time"].split(":"))
@@ -445,12 +489,14 @@ async def on_message(message):
 
 
 def _update_question_score(question_text, correct_delta=0, incorrect_delta=0):
+    global _scores_dirty
     data = load_questions()
     for q in data.get("questions", []):
         if q["question"] == question_text:
             q["correct"]   = max(0, q.get("correct",   0) + correct_delta)
             q["incorrect"] = max(0, q.get("incorrect", 0) + incorrect_delta)
             save_questions(data)
+            _scores_dirty = True
             break
 
 

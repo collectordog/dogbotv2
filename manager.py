@@ -363,6 +363,14 @@ class ManagerApp(tk.Tk):
         self._q_cmd_var.trace_add("write", self._save_q_cmd)
         inp(p, self._q_cmd_var).pack(padx=20, pady=(2, 8), fill="x")
 
+        qhdr = tk.Frame(p, bg=BG)
+        qhdr.pack(padx=20, fill="x")
+        tk.Label(qhdr, text=f"Questions", bg=BG, fg=FG_DIM,
+                 font=("Segoe UI", 9)).pack(side="left")
+        tk.Button(qhdr, text="↺ Refresh", bg=BG_INPUT, fg=FG_DIM,
+                  font=("Segoe UI", 9), relief="flat", cursor="hand2",
+                  command=self._refresh_qs).pack(side="right")
+
         lf, self._q_lb = scrolled_lb(p, 55, 5)
         lf.pack(padx=20, fill="x")
         self._q_lb.bind("<<ListboxSelect>>", self._on_q_sel)
@@ -454,6 +462,12 @@ class ManagerApp(tk.Tk):
         self._refresh_q_stats()
 
     def _refresh_q_stats(self):
+        # Pull latest scores from GitHub first
+        repo = os.path.dirname(os.path.realpath(__file__))
+        try:
+            subprocess.run(["git", "pull"], cwd=repo, capture_output=True, timeout=15)
+        except Exception:
+            pass
         for row in self._stats_tree.get_children():
             self._stats_tree.delete(row)
         qs = load_questions().get("questions", [])
@@ -940,6 +954,8 @@ class ManagerApp(tk.Tk):
     def deploy(self, clear_push_after=False):
         repo = os.path.dirname(os.path.realpath(__file__))
         try:
+            # Pull latest first so bot's score commits don't get overwritten
+            subprocess.run(["git", "pull", "--rebase"], cwd=repo, capture_output=True, timeout=15)
             r = subprocess.run(["git", "add", "."], cwd=repo, capture_output=True, text=True)
             if r.returncode != 0:
                 messagebox.showerror("Deploy failed", r.stderr); return
