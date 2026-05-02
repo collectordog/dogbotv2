@@ -888,4 +888,11 @@ async def on_command_error(ctx, error):
         await ctx.send(f"Something went wrong: {error.original}")
 
 
+@bot.slash_command(name="webster", description="Behold the goblin.")
+async def webster(ctx: discord.ApplicationContext):
+    embed = discord.Embed(title="Webster", colour=discord.Colour.dark_green())
+    embed.set_image(url="https://oldschool.runescape.wiki/images/Goblin.png")
+    await ctx.respond(embed=embed)
+
+
 bot.run(os.getenv("DISCORD_TOKEN"))
